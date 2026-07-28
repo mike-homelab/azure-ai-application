@@ -1,0 +1,115 @@
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - terraform/**
+      - azure-pipelines.yml
+
+pool:
+  name: 'home_lab'
+
+variables:
+  # General configuration
+  azureServiceConnection: 'azure-service-connection'
+  subscriptionId: 'c4b87c43-5cb1-44df-a495-b5eb8a284c4f'
+  workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
+  
+  # Terraform State Backend
+  backendRgName: 'rg-terraform-backend'
+  backendStorageAccountName: 'sttfstatebackend37c31b1f'
+  backendContainerName: 'tfstate'
+  backendKey: 'azure-ai-application/terraform.tfstate'
+
+stages:
+- stage: Plan
+  displayName: 'Terraform Plan'
+  jobs:
+  - job: PlanJob
+    displayName: 'Validate and Plan'
+    steps:
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: 'latest'
+
+    - task: AzureCLI@2
+      displayName: 'Terraform Plan'
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          $ErrorActionPreference = "Stop"
+          cd "$(workingDirectory)"
+          
+          Write-Host "==> Initializing Terraform with remote backend..."
+          terraform init `
+            -backend-config="resource_group_name=$(backendRgName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(backendKey)" `
+            -backend-config="subscription_id=$(subscriptionId)" `
+            -backend-config="use_azuread_auth=true"
+          
+          Write-Host "==> Validating configuration..."
+          terraform validate
+          
+          Write-Host "==> Generating Terraform plan..."
+          terraform plan -out=tfplan -input=false
+        addSpnToEnvironment: true
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Terraform Plan'
+      inputs:
+        targetPath: '$(workingDirectory)/tfplan'
+        artifact: 'tfplan'
+        publishLocation: 'pipeline'
+
+- stage: Apply
+  displayName: 'Terraform Apply'
+  dependsOn: Plan
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: ApplyJob
+    displayName: 'Deploy Resources'
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: 'latest'
+
+          - task: DownloadPipelineArtifact@2
+            displayName: 'Download Terraform Plan'
+            inputs:
+              artifact: 'tfplan'
+              path: '$(workingDirectory)'
+
+          - task: AzureCLI@2
+            displayName: 'Terraform Apply'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                $ErrorActionPreference = "Stop"
+                cd "$(workingDirectory)"
+                
+                Write-Host "==> Re-initializing Terraform backend..."
+                terraform init `
+                  -backend-config="resource_group_name=$(backendRgName)" `
+                  -backend-config="storage_account_name=$(backendStorageAccountName)" `
+                  -backend-config="container_name=$(backendContainerName)" `
+                  -backend-config="key=$(backendKey)" `
+                  -backend-config="subscription_id=$(subscriptionId)" `
+                  -backend-config="use_azuread_auth=true"
+                
+                Write-Host "==> Applying Terraform plan..."
+                terraform apply -input=false tfplan
+              addSpnToEnvironment: true
