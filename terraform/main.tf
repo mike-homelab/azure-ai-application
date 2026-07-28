@@ -10,8 +10,8 @@ data "azurerm_resource_group" "rg" {
 # Azure Service Bus
 resource "azurerm_servicebus_namespace" "sb" {
   name                = "sb-chat-${var.unique_suffix}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
   sku                 = "Standard"
 }
 
@@ -23,8 +23,8 @@ resource "azurerm_servicebus_queue" "sb_queue" {
 # Azure Cosmos DB (Free Tier)
 resource "azurerm_cosmosdb_account" "cosmos" {
   name                = "cosmos-chat-${var.unique_suffix}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
   offer_type          = "Standard"
   kind                = "GlobalDocumentDB"
 
@@ -37,20 +37,20 @@ resource "azurerm_cosmosdb_account" "cosmos" {
   }
 
   geo_location {
-    location          = azurerm_resource_group.rg.location
+    location          = data.azurerm_resource_group.rg.location
     failover_priority = 0
   }
 }
 
 resource "azurerm_cosmosdb_sql_database" "cosmos_sqldb" {
   name                = "chat_database"
-  resource_group_name = azurerm_resource_group.rg.name
+  resource_group_name = data.azurerm_resource_group.rg.name
   account_name        = azurerm_cosmosdb_account.cosmos.name
 }
 
 resource "azurerm_cosmosdb_sql_container" "cosmos_container" {
   name                  = "chat_history"
-  resource_group_name   = azurerm_resource_group.rg.name
+  resource_group_name   = data.azurerm_resource_group.rg.name
   account_name          = azurerm_cosmosdb_account.cosmos.name
   database_name         = azurerm_cosmosdb_sql_database.cosmos_sqldb.name
   partition_key_path    = "/session_id"
@@ -60,8 +60,8 @@ resource "azurerm_cosmosdb_sql_container" "cosmos_container" {
 # Azure Web PubSub (Free Tier)
 resource "azurerm_web_pubsub" "pubsub" {
   name                = "pubsub-chat-${var.unique_suffix}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
 
   sku      = "Free_F1"
   capacity = 1
@@ -70,8 +70,8 @@ resource "azurerm_web_pubsub" "pubsub" {
 # Azure AI Foundry / Cognitive Services
 resource "azurerm_cognitive_account" "ai" {
   name                = "ai-chat-${var.unique_suffix}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
   kind                = "CognitiveServices"
   sku_name            = "S0"
 }
@@ -79,16 +79,16 @@ resource "azurerm_cognitive_account" "ai" {
 # Azure App Service Plan & Web App
 resource "azurerm_service_plan" "asp" {
   name                = "asp-chat-${var.unique_suffix}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
   os_type             = "Linux"
   sku_name            = "B1"
 }
 
 resource "azurerm_linux_web_app" "app" {
   name                = "app-chat-${var.unique_suffix}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
   service_plan_id     = azurerm_service_plan.asp.id
 
   site_config {
@@ -113,8 +113,8 @@ resource "azurerm_linux_web_app" "app" {
 # Azure API Management
 resource "azurerm_api_management" "apim" {
   name                = "apim-chat-${var.unique_suffix}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
   publisher_name      = var.apim_publisher_name
   publisher_email     = var.apim_publisher_email
 

@@ -1,7 +1,7 @@
 resource "azurerm_monitor_autoscale_setting" "app_autoscale" {
   name                = "autoscale-chat-app-${var.unique_suffix}"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
   target_resource_id  = azurerm_service_plan.asp.id
 
   profile {

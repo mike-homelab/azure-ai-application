@@ -1,6 +1,6 @@
 resource "azurerm_api_management_api" "chat_api" {
   name                = "chat-api"
-  resource_group_name = azurerm_resource_group.rg.name
+  resource_group_name = data.azurerm_resource_group.rg.name
   api_management_name = azurerm_api_management.apim.name
   revision            = "1"
   display_name        = "Chatbot API"
@@ -13,7 +13,7 @@ resource "azurerm_api_management_api" "chat_api" {
 resource "azurerm_api_management_api_policy" "chat_api_policy" {
   api_name            = azurerm_api_management_api.chat_api.name
   api_management_name = azurerm_api_management.apim.name
-  resource_group_name = azurerm_resource_group.rg.name
+  resource_group_name = data.azurerm_resource_group.rg.name
 
   xml_content = <<XML
 <policies>

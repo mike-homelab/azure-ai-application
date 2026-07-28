@@ -15,7 +15,7 @@ resource "azurerm_role_assignment" "sb_sender" {
 
 # 2. Cosmos DB Built-in Data Contributor
 resource "azurerm_cosmosdb_sql_role_assignment" "cosmos_data_contributor" {
-  resource_group_name = azurerm_resource_group.rg.name
+  resource_group_name = data.azurerm_resource_group.rg.name
   account_name        = azurerm_cosmosdb_account.cosmos.name
   # Built-in role ID for "Cosmos DB Built-in Data Contributor"
   role_definition_id = "${azurerm_cosmosdb_account.cosmos.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002"
